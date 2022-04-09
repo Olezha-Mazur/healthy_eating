@@ -1,4 +1,4 @@
 .DS_Store
 *.sw*
-token.py
+bot_token.py
 __pycache__/

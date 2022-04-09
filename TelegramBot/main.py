@@ -4,10 +4,7 @@
 from turtle import up
 from telegram.ext import Updater, MessageHandler, Filters, CommandHandler
 
-from token import token_
-
-
-TOKEN = token_
+from bot_token import TOKEN
 
 
 def start(update, context):

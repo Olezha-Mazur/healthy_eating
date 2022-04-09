@@ -1,2 +1,4 @@
 .DS_Store
 *.sw*
+token.py
+__pycache__/

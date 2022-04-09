@@ -4,8 +4,10 @@
 from turtle import up
 from telegram.ext import Updater, MessageHandler, Filters, CommandHandler
 
+from token import token_
 
-TOKEN = '5149274621:AAHNf_XDRwWR5M4OhpJXFjx2kwWfF9oC6-s'
+
+TOKEN = token_
 
 
 def start(update, context):

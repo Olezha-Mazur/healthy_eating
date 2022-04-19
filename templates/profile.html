@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<table>
+    <tr valign="top">
+        <td><img src="{{ form.avatar(128) }}"></td>
+        <td>
+            <h3>Пользователь: {{ form.name }}</h3>
+            <h6>Возраст: {{ form.age }} лет</h6>
+            <h6>Вес: {{ form.weight }} кг</h6>
+            <h6>Рост: {{ form.height }} см</h6>
+        </td>
+    </tr>
+</table>
+<hr>
+
+<h3>Загрузите фотографию</h3>
+<form class="login_form" method="post" enctype="multipart/form-data">
+    <div class="form-group">
+<!--        <label for="photo">Приложите фотографию</label>-->
+        <input type="file" class="form-control-file" id="photo" name="file">
+    </div>
+    <button type="submit" class="btn btn-primary">Отправить</button>
+</form>
+{% endblock %}

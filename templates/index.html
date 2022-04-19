@@ -9,7 +9,7 @@
     <br>
     <h1 style="text-align: center">Добро пожаловать в Calory Counter</h1>
 {% else %}
-    <h1 style="text-align: center">Зарегистрированные пользователи</h1>
+    <h1 style="text-align: center">Главная</h1>
     <p1>BMR = {{bmr}}</p1>
     <br>
     <a href="/activities" class="btn btn-secondary">Добавить меню на день</a>
@@ -17,7 +17,7 @@
     <div class="col-md6 border rounded">
         <h2>{{item.date}}</h2>
         <div>
-            Автор - {{item.user.name}}, Дата написания - {{item.created_date}}
+            Автор - {{item.user.name}}, Дата изменения - {{item.created_date}}
         </div>
         {% if current_user.is_authenticated and current_user == item.user %}
         <div>

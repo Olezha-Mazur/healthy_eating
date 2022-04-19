@@ -1,9 +1,9 @@
-from flask import Flask, render_template, redirect, request, abort, make_response, jsonify
+from flask import Flask, render_template, redirect, request, abort, make_response, jsonify, url_for
 from data import db_session, activities_resources, users_resources
 from data.users import User
 from data.activities import Activities
 from forms.user_forms import RegisterForm, LoginForm, DetailsForm
-from forms.activities import ActivityForm
+from forms.activities import ActivityForm, ProfileForm
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from flask_restful import abort, Api
 
@@ -131,27 +131,70 @@ def add_activity():
                            form=form)
 
 
-@app.route('/activities/<int:id>', methods=['GET'])
+@app.route('/activities/<int:id>', methods=['GET', 'POST'])
 @login_required
 def view_activity(id):
     form = ActivityForm()
-    db_sess = db_session.create_session()
-    activities = db_sess.query(Activities).filter(Activities.id == id,
-                                                  Activities.user == current_user
-                                                  ).first()
-    if activities:
-        form.date.data = activities.date
-        form.breakfast.data = activities.breakfast
-        form.lunch.data = activities.lunch
-        form.dinner.data = activities.dinner
-        form.is_private.data = activities.is_private
-    else:
-        abort(404)
+    if request.method == "GET":
+        db_sess = db_session.create_session()
+        activities = db_sess.query(Activities).filter(Activities.id == id,
+                                                      Activities.user == current_user
+                                                      ).first()
+        if activities:
+            form.date.data = activities.date
+            form.breakfast.data = activities.breakfast
+            form.lunch.data = activities.lunch
+            form.dinner.data = activities.dinner
+            form.is_private.data = activities.is_private
+        else:
+            abort(404)
+    if form.validate_on_submit():
+        db_sess = db_session.create_session()
+        activities = db_sess.query(Activities).filter(Activities.id == id,
+                                                      Activities.user == current_user
+                                                      ).first()
+        activities.date = form.date.data
+        activities.breakfast = form.breakfast.data
+        activities.lunch = form.lunch.data
+        activities.dinner = form.dinner.data
+        activities.is_private = form.is_private.data
+        print(form.breakfast.data)
+        db_sess.commit()
+        return redirect('/')
     return render_template('activities.html',
                            title='Редактирование меню',
                            form=form
                            )
 
+
+@app.route('/activities_delete/<int:id>', methods=['GET', 'POST'])
+@login_required
+def delete_activity(id):
+    db_sess = db_session.create_session()
+    activity = db_sess.query(Activities).filter(Activities.id == id).first()
+    db_sess.delete(activity)
+    db_sess.commit()
+    return redirect('/')
+
+
+@app.route('/profile/<id>', methods=['GET', 'POST'])
+@login_required
+def edit_profile(id):
+    db_sess = db_session.create_session()
+    form = activities = db_sess.query(User).filter(User.id == id,
+                                                   ).first()
+    # if form.validate_on_submit():
+    #     # db_sess = db_session.create_session()
+    #     # current_user.name = form.username.data
+    #     # current_user.about_me = form.about_me.data
+    #     # db_sess.commit()
+    #     # flash('Your changes have been saved.')
+    #     return redirect(url_for('edit_profile'))
+    # elif request.method == 'GET':
+        # form.username.data = current_user.name
+        # form.about_me.data = current_user.about_me
+    return render_template('profile.html', title='Profile',
+                           form=form)
 
 api.add_resource(activities_resources.ActivitiesListResource, '/api/activities')
 api.add_resource(activities_resources.ActivitiesResource, '/api/activities/<int:activities_id>')

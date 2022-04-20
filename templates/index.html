@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if not current_user.is_authenticated %}
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <h1 style="text-align: center">Добро пожаловать в Calory Counter</h1>
+{% else %}
+    <h1 style="text-align: center">Информация</h1>
+    <h2>BMR = {{bmr}}</h2>
+    <a href="/week" class="btn btn-secondary">Посмотреть на неделю</a>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Изменение дневной активности</h1>
+<form action="" method="post">
+    {{ form.hidden_tag() }}
+    <p>
+        {{ form.breakfast.label }}<br>
+        {{ form.breakfast(class="form-control") }}<br>
+        {% for error in form.breakfast.errors %}
+            <p class="alert alert-danger" role="alert">
+                {{ error }}
+            </p>
+        {% endfor %}
+    </p>
+    <p>
+        {{ form.lunch.label }}<br>
+        {{ form.lunch(class="form-control") }}<br>
+        {% for error in form.lunch.errors %}
+            <p class="alert alert-danger" role="alert">
+                {{ error }}
+            </p>
+        {% endfor %}
+    </p>
+    <p>
+        {{ form.dinner.label }}<br>
+        {{ form.dinner(class="form-control") }}<br>
+        {% for error in form.dinner.errors %}
+            <p class="alert alert-danger" role="alert">
+                {{ error }}
+            </p>
+        {% endfor %}
+    </p>
+    <p>
+        {{ form.other_gains.label }}<br>
+        {{ form.other_gains(class="form-control") }}<br>
+        {% for error in form.other_gains.errors %}
+            <p class="alert alert-danger" role="alert">
+                {{ error }}
+            </p>
+        {% endfor %}
+    </p>
+    <p>
+        {{ form.lost.label }}<br>
+        {{ form.lost(class="form-control") }}<br>
+        {% for error in form.lost.errors %}
+            <p class="alert alert-danger" role="alert">
+                {{ error }}
+            </p>
+        {% endfor %}
+    </p>
+    <p>
+        {{ form.note.label }}<br>
+        {{ form.note(class="form-control") }}<br>
+        {% for error in form.note.errors %}
+            <p class="alert alert-danger" role="alert">
+                {{ error }}
+            </p>
+        {% endfor %}
+    </p>
+    <p>{{ form.submit(type="submit", class="btn btn-primary") }}</p>
+    {{message}}
+</form>
+{% endblock %}

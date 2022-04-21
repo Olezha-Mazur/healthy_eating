@@ -2,10 +2,11 @@ from flask import Flask, render_template, redirect, request, abort, make_respons
 from data import db_session, activities_resources, users_resources
 from data.users import User
 from data.activities import Activities
-from forms.user_forms import RegisterForm, LoginForm, DetailsForm
+from forms.user_forms import RegisterForm, LoginForm, DetailsForm, DayForm
 from forms.activities import ActivityForm, ProfileForm
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from flask_restful import abort, Api
+from matplotlib import pyplot
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
@@ -109,6 +110,54 @@ def login():
 def logout():
     logout_user()
     return redirect("/")
+
+
+@app.route('/week', methods=['GET'])
+@login_required
+def week():
+    db_sess = db_session.create_session()
+    uw = current_user.get_week()
+    title = 'Неделя #' + str(uw[0])
+    names = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+    week = uw[1]
+    day_total = []
+    for day in week:
+        gain = day.breakfast + day.lunch + day.dinner + day.other_gains
+        day_total.append(gain - day.lost)
+    week = [[str(x.id), names[i], str(day_total[i])] for i, x in enumerate(week)]
+    graph_file = 'out.png'
+    pyplot.title('Калории за дни недели')
+    pyplot.xlabel('Дни')
+    pyplot.ylabel('Калории')
+    pyplot.xticks(range(len(day_total)), names)
+    pyplot.bar(range(len(day_total)), day_total)
+    pyplot.savefig('static/'+graph_file)
+    return render_template('week.html', graph_file=graph_file, week=week, title=title)
+
+
+@app.route('/day/<int:id>', methods=['GET', 'POST'])
+@login_required
+def day_edit(id):
+    db_sess = db_session.create_session()
+    day = db_sess.query(Activities).get(id)
+    form = DayForm()
+    if form.validate_on_submit():
+        day.breakfast = form.breakfast.data
+        day.lunch = form.lunch.data
+        day.dinner = form.dinner.data
+        day.other_gains = form.other_gains.data
+        day.lost = form.lost.data
+        day.note = form.note.data
+        db_sess.merge(day)
+        db_sess.commit()
+        return redirect('/week')
+    form.breakfast.data = day.breakfast
+    form.lunch.data = day.lunch
+    form.dinner.data = day.dinner
+    form.other_gains.data = day.other_gains
+    form.lost.data = day.lost
+    form.note.data = day.note
+    return render_template('day_edit.html', form=form, week=current_user.get_week())
 
 
 @app.route('/activities', methods=['GET', 'POST'])

@@ -20,6 +20,16 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Войти')
 
 
+class DayForm(FlaskForm):
+    breakfast = IntegerField('Получено калорий за завтрак', validators=[NumberRange(min=0)])
+    lunch = IntegerField('Получено калорий за обед', validators=[NumberRange(min=0)])
+    dinner = IntegerField('Получено калорий за ужин', validators=[NumberRange(min=0)])
+    other_gains = IntegerField('Получено калорий вне приёма пищи', validators=[NumberRange(min=0)])
+    lost = IntegerField('Всего потрачено калорий за день', validators=[NumberRange(min=0)])
+    note = StringField('Заметка (для планов)')
+    submit = SubmitField('Сохранить')
+
+
 class DetailsForm(FlaskForm):
     age = IntegerField('Возраст (лет)', validators=[DataRequired(), NumberRange(min=12,
                                                                           message="Вы должны быть 12 лет или старше")])

@@ -6,6 +6,8 @@ from sqlalchemy import orm
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from hashlib import md5
+from . import db_session
+from .activities import Activities
 
 
 class User(SqlAlchemyBase, UserMixin, SerializerMixin):
@@ -37,3 +39,29 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
         digest = md5(self.email.lower().encode('utf-8')).hexdigest()
         return 'https://www.gravatar.com/avatar/{}?d=identicon&s={}'.format(
             digest, size)
+
+
+    def get_week(self, back=0):
+        year, weekn = (datetime.date.today() - datetime.timedelta(weeks=back)).isocalendar()[:2]
+        week = []
+        db_sess = db_session.create_session()
+        for i in range(1, 8):
+            n = f'{year}:{weekn}:{i}'
+            day = db_sess.query(Activities).filter(Activities.user_id == self.id) \
+                .filter(Activities.n == n).first()
+            if day is None:
+                day = Activities(
+                    n = n,
+                    breakfast = 0,
+                    lunch = 0,
+                    dinner = 0,
+                    other_gains = 0,
+                    lost = 0,
+                    note = "",
+                    user_id = self.id,
+                )
+                db_sess.add(day)
+                db_sess.commit()
+            week.append(day)
+
+        return [weekn, week]

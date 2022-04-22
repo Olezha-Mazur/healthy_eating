@@ -2,10 +2,16 @@
 
 {% block content %}
 <h1>{{title}}</h1>
-{% for day in week %}
-    {{ day[1] + ' ' + day[2] }}
-    <a class="btn btn-primary " href={{"/day/" + day[0]}}>Изменить</a>
-    <br>
-{% endfor %}
-<img src='{{ url_for("static", filename = graph_file) }}'>
+<div id="cont">
+    <div id="changes">
+        {% for day in week %}
+            {{ day[1] + ' ' + day[2] }}
+            <a class="btn btn-primary " href={{"/day/" + day[0]}}>Изменить</a>
+            <br>
+        {% endfor %}
+    </div>
+    <div id="graphic">
+        <img src='{{ url_for("static", filename = graph_file) }}'>
+    </div>
+</div>
 {% endblock %}

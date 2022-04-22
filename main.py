@@ -75,6 +75,7 @@ def details():
     if current_user.entered_details:
         return redirect('/')
     form = DetailsForm()
+
     if form.validate_on_submit():
         db_sess = db_session.create_session()
         usr = db_sess.query(User).get(current_user.id)
@@ -84,10 +85,36 @@ def details():
         usr.gender = form.gender.data
         usr.entered_details = True
         db_sess.add(usr)
-        print(1)
         db_sess.commit()
         return redirect('/')
     return render_template('details.html', form=form)
+
+
+@app.route("/change_details/<int:id>", methods=['GET', 'POST'])
+def change_details(id):
+    form = DetailsForm()
+    if request.method == 'GET':
+        db_sess = db_session.create_session()
+        usr = db_sess.query(User).get(current_user.id)
+        if usr:
+            print(usr.age)
+            form.age.data = usr.age
+            form.weight.data = usr.weight
+            form.height.data = usr.height
+            form.gender.data = usr.gender
+        else:
+            print(1)
+            abort(404)
+    if form.validate_on_submit():
+        db_sess = db_session.create_session()
+        usr = db_sess.query(User).get(current_user.id)
+        usr.age = form.age.data
+        usr.weight = form.weight.data
+        usr.height = form.height.data
+        usr.gender = form.gender.data
+        db_sess.commit()
+        return redirect(f'/profile/{current_user.id}')
+    return render_template('details.html', form=form, title='Изменение информации')
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -131,8 +158,9 @@ def week():
     pyplot.ylabel('Калории')
     pyplot.xticks(range(len(day_total)), names)
     pyplot.bar(range(len(day_total)), day_total)
-    pyplot.savefig('static/'+graph_file)
-    return render_template('week.html', graph_file=graph_file, week=week, title=title)
+    pyplot.savefig('static/' + graph_file)
+    return render_template('week.html', graph_file=graph_file, week=week, title=title,
+                           style=url_for('static', filename=f'css/week.css'))
 
 
 @app.route('/day/<int:id>', methods=['GET', 'POST'])
@@ -160,90 +188,19 @@ def day_edit(id):
     return render_template('day_edit.html', form=form, week=current_user.get_week())
 
 
-@app.route('/activities', methods=['GET', 'POST'])
-@login_required
-def add_activity():
-    form = ActivityForm()
-    if form.validate_on_submit():
-        db_sess = db_session.create_session()
-        activities = Activities()
-        activities.date = form.date.data
-        activities.breakfast = form.breakfast.data
-        activities.lunch = form.lunch.data
-        activities.dinner = form.dinner.data
-        activities.is_private = form.is_private.data
-        current_user.activities.append(activities)
-        db_sess.merge(current_user)
-        db_sess.commit()
-        return redirect('/')
-    return render_template('activities.html', title='Меню на день',
-                           form=form)
-
-
-@app.route('/activities/<int:id>', methods=['GET', 'POST'])
-@login_required
-def view_activity(id):
-    form = ActivityForm()
-    if request.method == "GET":
-        db_sess = db_session.create_session()
-        activities = db_sess.query(Activities).filter(Activities.id == id,
-                                                      Activities.user == current_user
-                                                      ).first()
-        if activities:
-            form.date.data = activities.date
-            form.breakfast.data = activities.breakfast
-            form.lunch.data = activities.lunch
-            form.dinner.data = activities.dinner
-            form.is_private.data = activities.is_private
-        else:
-            abort(404)
-    if form.validate_on_submit():
-        db_sess = db_session.create_session()
-        activities = db_sess.query(Activities).filter(Activities.id == id,
-                                                      Activities.user == current_user
-                                                      ).first()
-        activities.date = form.date.data
-        activities.breakfast = form.breakfast.data
-        activities.lunch = form.lunch.data
-        activities.dinner = form.dinner.data
-        activities.is_private = form.is_private.data
-        print(form.breakfast.data)
-        db_sess.commit()
-        return redirect('/')
-    return render_template('activities.html',
-                           title='Редактирование меню',
-                           form=form
-                           )
-
-
-@app.route('/activities_delete/<int:id>', methods=['GET', 'POST'])
-@login_required
-def delete_activity(id):
-    db_sess = db_session.create_session()
-    activity = db_sess.query(Activities).filter(Activities.id == id).first()
-    db_sess.delete(activity)
-    db_sess.commit()
-    return redirect('/')
-
-
 @app.route('/profile/<id>', methods=['GET', 'POST'])
 @login_required
 def edit_profile(id):
     db_sess = db_session.create_session()
     form = activities = db_sess.query(User).filter(User.id == id,
                                                    ).first()
-    # if form.validate_on_submit():
-    #     # db_sess = db_session.create_session()
-    #     # current_user.name = form.username.data
-    #     # current_user.about_me = form.about_me.data
-    #     # db_sess.commit()
-    #     # flash('Your changes have been saved.')
-    #     return redirect(url_for('edit_profile'))
-    # elif request.method == 'GET':
-        # form.username.data = current_user.name
-        # form.about_me.data = current_user.about_me
+    if request.method == 'POST':
+        f = request.files['file']
+        with open(f'static/img/{current_user.id}.jpg', mode='wb') as g:
+            g.write(f.read())
     return render_template('profile.html', title='Profile',
-                           form=form)
+                           form=form, method=request.method)
+
 
 api.add_resource(activities_resources.ActivitiesListResource, '/api/activities')
 api.add_resource(activities_resources.ActivitiesResource, '/api/activities/<int:activities_id>')

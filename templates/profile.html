@@ -3,12 +3,17 @@
 {% block content %}
 <table>
     <tr valign="top">
-        <td><img src="{{ form.avatar(128) }}"></td>
+        {% if method == 'GET' %}
+            <td><img src="{{ form.avatar(128, form.id) }}"></td>
+        {% else %}
+            <td><img src="{{ form.photo(128, form.id) }}" ></td>
+        {% endif %}
         <td>
             <h3>Пользователь: {{ form.name }}</h3>
             <h6>Возраст: {{ form.age }} лет</h6>
             <h6>Вес: {{ form.weight }} кг</h6>
             <h6>Рост: {{ form.height }} см</h6>
+            <a class="btn btn-info" href="/change_details/{{form.id}}">Изменить информацию</a>
         </td>
     </tr>
 </table>

@@ -1,0 +1,15 @@
+#cont {
+    overflow: hidden;
+}
+#changes {
+    float: left;
+    padding: 40px;
+    width: 40%;
+}
+#graphic {
+    float: left;
+    width: 60%;
+}
+h1 {
+    text-align: center;
+}

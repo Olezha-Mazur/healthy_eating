@@ -8,6 +8,9 @@ from flask_login import UserMixin
 from hashlib import md5
 from . import db_session
 from .activities import Activities
+from PIL import Image
+from flask import url_for
+import os
 
 
 class User(SqlAlchemyBase, UserMixin, SerializerMixin):
@@ -35,10 +38,21 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     def check_password(self, password):
         return check_password_hash(self.hashed_password, password)
 
-    def avatar(self, size):
+    def avatar(self, size, id_polz):
+        if os.path.exists(f'static/img/{id_polz}.jpg'):
+            im = Image.open(f"static/img/{id_polz}.jpg")
+            im2 = im.resize((size, size))
+            im2.save(f"static/img/{id_polz}.jpg")
+            return url_for('static', filename=f'img/{id_polz}.jpg')
         digest = md5(self.email.lower().encode('utf-8')).hexdigest()
         return 'https://www.gravatar.com/avatar/{}?d=identicon&s={}'.format(
             digest, size)
+
+    def photo(self, size, id_polz):
+        im = Image.open(f"static/img/{id_polz}.jpg")
+        im2 = im.resize((size, size))
+        im2.save(f"static/img/{id_polz}.jpg")
+        return url_for('static', filename=f'img/{id_polz}.jpg')
 
 
     def get_week(self, back=0):

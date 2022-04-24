@@ -1,12 +1,15 @@
+import matplotlib.figure
 from flask import Flask, render_template, redirect, request, abort, make_response, jsonify, url_for
-from data import db_session, activities_resources, users_resources
+from flask import Response
+from data import db_session, apis
 from data.users import User
 from data.activities import Activities
 from forms.user_forms import RegisterForm, LoginForm, DetailsForm, DayForm
 from forms.activities import ActivityForm, ProfileForm
-from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user, AnonymousUserMixin
 from flask_restful import abort, Api
 from matplotlib import pyplot
+from io import StringIO
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
@@ -21,19 +24,19 @@ def load_user(user_id):
     db_sess = db_session.create_session()
     return db_sess.query(User).get(user_id)
 
-
 @app.route("/")
 def index():
     db_sess = db_session.create_session()
     bmr = 0
     if current_user.is_authenticated:
         if not current_user.entered_details:
-            return redirect('/details')
+            return redirect('/details/'+str(current_user.id))
         activities = db_sess.query(Activities).filter(
             (Activities.user == current_user) | (Activities.is_private is not True))
         cs = {
             'M': [66.5, 13.75, 5.003, 6.75],
-            'F': [655.1, 9.563, 1.850, 4.676]
+            'F': [655.1, 9.563, 1.850, 4.676],
+            'O': [655.1, 9.563, 1.850, 4.676],
         }
         c = cs[current_user.gender]
         bmr = c[0] + c[1] * current_user.weight + c[2] * current_user.height - c[3] * current_user.age
@@ -41,6 +44,16 @@ def index():
         activities = db_sess.query(Activities).filter(Activities.is_private is not True)
     return render_template("index.html", activities=activities, bmr=bmr)
 
+dynamic_data = {}
+@app.route('/dynamic/<path>', methods=['GET'])
+def dynamic(path):
+    #with open('dynamic/'+path, 'rb') as f:
+    #    return f.read()
+    #return None
+    if not path in dynamic_data:
+        return None
+    data = dynamic_data[path]
+    return Response(data[0], mimetype=data[1])
 
 @app.route('/register', methods=['GET', 'POST'])
 def reqister():
@@ -68,14 +81,15 @@ def reqister():
     return render_template('register.html', form=form)
 
 
-@app.route("/details", methods=['GET', 'POST'])
-def details():
+@app.route("/details/<int:id>", methods=['GET', 'POST'])
+def details(id):
     if not current_user.is_authenticated:
         return redirect('/register')
-    if current_user.entered_details:
-        return redirect('/')
     form = DetailsForm()
-
+    db_sess = db_session.create_session()
+    user = db_sess.query(User).get(id)
+    if user is None:
+        return abort(404)
     if form.validate_on_submit():
         db_sess = db_session.create_session()
         usr = db_sess.query(User).get(current_user.id)
@@ -87,24 +101,24 @@ def details():
         db_sess.add(usr)
         db_sess.commit()
         return redirect('/')
-    return render_template('details.html', form=form)
+    return render_template('details.html', form=form, title='Изменение информации')
 
 
 @app.route("/change_details/<int:id>", methods=['GET', 'POST'])
 def change_details(id):
+    db_sess = db_session.create_session()
+    user = db_sess.query(User).get(id)
+    if user is None:
+        return abort(404)
     form = DetailsForm()
     if request.method == 'GET':
-        db_sess = db_session.create_session()
-        usr = db_sess.query(User).get(current_user.id)
-        if usr:
-            print(usr.age)
-            form.age.data = usr.age
-            form.weight.data = usr.weight
-            form.height.data = usr.height
-            form.gender.data = usr.gender
+        if user:
+            form.age.data = user.age
+            form.weight.data = user.weight
+            form.height.data = user.height
+            form.gender.data = user.gender
         else:
-            print(1)
-            abort(404)
+            return abort(404)
     if form.validate_on_submit():
         db_sess = db_session.create_session()
         usr = db_sess.query(User).get(current_user.id)
@@ -139,28 +153,38 @@ def logout():
     return redirect("/")
 
 
-@app.route('/week', methods=['GET'])
+@app.route('/week/<int:week_off>', methods=['GET'])
 @login_required
-def week():
-    db_sess = db_session.create_session()
-    uw = current_user.get_week()
-    title = 'Неделя #' + str(uw[0])
+def week(week_off):
+    global dynamic_data
+    if not current_user.entered_details:
+        redirect('/details/' + str(current_user.id))
+    week_off = max(0, min(1, week_off))
+    uw = current_user.get_week(week_off)
+    title = 'Неделя #' + str(uw[1]) + ', ' + str(uw[0])
+    s_names = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
     names = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
-    week = uw[1]
+    week_rel = 'Перейти к ' + ['прошлой', 'текущей'][week_off] + ' неделе'
+    week = uw[2]
     day_total = []
     for day in week:
         gain = day.breakfast + day.lunch + day.dinner + day.other_gains
         day_total.append(gain - day.lost)
     week = [[str(x.id), names[i], str(day_total[i])] for i, x in enumerate(week)]
-    graph_file = 'out.png'
-    pyplot.title('Калории за дни недели')
-    pyplot.xlabel('Дни')
-    pyplot.ylabel('Калории')
-    pyplot.xticks(range(len(day_total)), names)
-    pyplot.bar(range(len(day_total)), day_total)
-    pyplot.savefig('static/' + graph_file)
-    return render_template('week.html', graph_file=graph_file, week=week, title=title,
-                           style=url_for('static', filename=f'css/week.css'))
+    graph_file = 'wg_' + str(current_user.id) + '.svg'
+    data = StringIO()
+    figure = matplotlib.figure.Figure()
+    axis = figure.add_subplot(title='Недельная статистика')
+    axis.set_xlabel('Дни')
+    axis.set_ylabel('Калории')
+    axis.set_xticks(range(len(day_total)), s_names)
+    axis.bar(range(len(day_total)), day_total)
+    figure.savefig(data, format='svg')
+    data.seek(0)
+    dynamic_data[graph_file] = [data.read(), 'image/svg+xml']
+    data.close()
+    return render_template('week.html', graph_file=graph_file, week=week, title=title, weekr=week_rel,
+                           style=url_for('static', filename='css/week.css'), weeko=str(1 - week_off))
 
 
 @app.route('/day/<int:id>', methods=['GET', 'POST'])
@@ -168,6 +192,8 @@ def week():
 def day_edit(id):
     db_sess = db_session.create_session()
     day = db_sess.query(Activities).get(id)
+    if day.user_id != current_user.id:
+        return redirect('/')
     form = DayForm()
     if form.validate_on_submit():
         day.breakfast = form.breakfast.data
@@ -178,7 +204,7 @@ def day_edit(id):
         day.note = form.note.data
         db_sess.merge(day)
         db_sess.commit()
-        return redirect('/week')
+        return redirect('/week/0')
     form.breakfast.data = day.breakfast
     form.lunch.data = day.lunch
     form.dinner.data = day.dinner
@@ -188,24 +214,28 @@ def day_edit(id):
     return render_template('day_edit.html', form=form, week=current_user.get_week())
 
 
-@app.route('/profile/<id>', methods=['GET', 'POST'])
-@login_required
-def edit_profile(id):
+@app.route('/profile/<int:id>', methods=['GET', 'POST'])
+def profile(id):
     db_sess = db_session.create_session()
-    form = activities = db_sess.query(User).filter(User.id == id,
-                                                   ).first()
-    if request.method == 'POST':
-        f = request.files['file']
-        with open(f'static/img/{current_user.id}.jpg', mode='wb') as g:
+    user = db_sess.query(User).get(id)
+    if user is None:
+        return abort(404)
+    if current_user.is_anonymous:
+        is_current = False
+    else:
+        is_current = id == current_user.id
+    if is_current and request.method == 'POST':
+        f = request.files['avatar']
+        with open(f'static/img/avatar/{current_user.id}.jpg', mode='wb') as g:
             g.write(f.read())
-    return render_template('profile.html', title='Profile',
-                           form=form, method=request.method)
+            current_user.change_avatar(128)
+    return render_template('profile.html', title='Profile', user=user, is_current=is_current)
 
 
-api.add_resource(activities_resources.ActivitiesListResource, '/api/activities')
-api.add_resource(activities_resources.ActivitiesResource, '/api/activities/<int:activities_id>')
-api.add_resource(users_resources.UsersListResource, '/api/users')
-api.add_resource(users_resources.UsersResource, '/api/users/<int:user_id>')
+api.add_resource(apis.DaysResource, '/api/days/<int:day_id>')
+api.add_resource(apis.UsersResource, '/api/users/<int:user_id>')
+api.add_resource(apis.WeeksResource, '/api/users/<int:user_id>/weeks/<int:week_off>')
+api.add_resource(apis.WeeksListResource, '/api/users/<int:user_id>/weeks')
 
 
 def main():

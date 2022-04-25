@@ -39,21 +39,17 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     def check_password(self, password):
         return check_password_hash(self.hashed_password, password)
 
-    def avatar(self, size, id_polz):
-        if os.path.exists(f'static/img/{id_polz}.jpg'):
-            im = Image.open(f"static/img/{id_polz}.jpg")
-            im2 = im.resize((size, size))
-            im2.save(f"static/img/{id_polz}.jpg")
-            return url_for('static', filename=f'img/{id_polz}.jpg')
+    def avatar(self, size):
+        path = f"static/img/avatar/{self.id}.jpg"
+        if os.path.exists(path):
+            return url_for('static', filename=f'img/avatar/{self.id}.jpg')
         digest = md5(self.email.lower().encode('utf-8')).hexdigest()
-        return 'https://www.gravatar.com/avatar/{}?d=identicon&s={}'.format(
-            digest, size)
+        return 'https://www.gravatar.com/avatar/{}?d=identicon&s={}'.format(digest, size)
 
-    def photo(self, size, id_polz):
-        im = Image.open(f"static/img/{id_polz}.jpg")
-        im2 = im.resize((size, size))
-        im2.save(f"static/img/{id_polz}.jpg")
-        return url_for('static', filename=f'img/{id_polz}.jpg')
+    def change_avatar(self, size):
+        path = f"static/img/avatar/{self.id}.jpg"
+        im = Image.open(path)
+        im.resize((size, size)).save(path)
 
 
     def get_week(self, back=0):
@@ -79,4 +75,4 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
                 db_sess.commit()
             week.append(day)
 
-        return [weekn, week]
+        return [year, weekn, week]

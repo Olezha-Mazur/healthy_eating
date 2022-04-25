@@ -3,28 +3,27 @@
 {% block content %}
 <table>
     <tr valign="top">
-        {% if method == 'GET' %}
-            <td><img src="{{ form.avatar(128, form.id) }}"></td>
-        {% else %}
-            <td><img src="{{ form.photo(128, form.id) }}" ></td>
-        {% endif %}
+        <td><img src="{{ user.avatar(128) }}"></td>
         <td>
-            <h3>Пользователь: {{ form.name }}</h3>
-            <h6>Возраст: {{ form.age }} лет</h6>
-            <h6>Вес: {{ form.weight }} кг</h6>
-            <h6>Рост: {{ form.height }} см</h6>
-            <a class="btn btn-info" href="/change_details/{{form.id}}">Изменить информацию</a>
+            <h3>Пользователь: {{ user.name }}</h3>
+            <h6>Возраст: {{ user.age }} лет</h6>
+            <h6>Вес: {{ user.weight }} кг</h6>
+            <h6>Рост: {{ user.height }} см</h6>
+            {% if is_current %}
+                <a class="btn btn-info" href="/change_details/{{user.id}}">Изменить информацию</a>
+            {% endif %}
         </td>
     </tr>
 </table>
-<hr>
-
-<h3>Загрузите фотографию</h3>
-<form class="login_form" method="post" enctype="multipart/form-data">
-    <div class="form-group">
-<!--        <label for="photo">Приложите фотографию</label>-->
-        <input type="file" class="form-control-file" id="photo" name="file">
-    </div>
-    <button type="submit" class="btn btn-primary">Отправить</button>
-</form>
+{% if is_current %}
+    <hr>
+    <h3>Загрузите фотографию</h3>
+    <form class="login_form" method="post" enctype="multipart/form-data">
+        <div class="form-group">
+    <!--        <label for="photo">Приложите фотографию</label>-->
+            <input type="file" class="form-control-file" id="photo" name="avatar">
+        </div>
+        <button type="submit" class="btn btn-primary">Отправить</button>
+    </form>
+{%endif%}
 {% endblock %}

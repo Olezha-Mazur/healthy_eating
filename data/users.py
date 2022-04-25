@@ -31,6 +31,7 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
                                      default=datetime.datetime.now)
     entered_details = sqlalchemy.Column(sqlalchemy.Boolean, default=False)
     activities = orm.relation("Activities", back_populates='user')
+    points = orm.relation("Points", back_populates='user')
 
     def set_password(self, password):
         self.hashed_password = generate_password_hash(password)

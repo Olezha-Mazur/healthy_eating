@@ -1,0 +1,25 @@
+#photo {
+    overflow: hidden;
+    align: justify;
+}
+#item1 {
+    float: left;
+    margin: 0 10 0 10px;
+    padding: 5px;
+    padding-right: 50px;
+    padding-left: 10px;
+    align: justify;
+}
+#item2 {
+    padding-right: 50px;
+    float: left;
+    margin: 0 10 0 10px;
+    align: justify;
+
+}
+#item3 {
+    padding-right: 50px;
+    float: left;
+    margin: 0 10 0 10px;
+
+}

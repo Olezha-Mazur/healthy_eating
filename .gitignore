@@ -2,3 +2,4 @@
 *.sw*
 bot_token.py
 __pycache__/
+.idea/

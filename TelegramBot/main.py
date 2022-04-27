@@ -1,83 +1,132 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+from flask import abort
+from data import db_session
+from data.activities import Activities
+from flask import jsonify
+from data.users import User
+from flask_restful import reqparse, abort, Resource
 
-import logging
-import sqlite3
-import telebot
-from telebot import types
-from werkzeug.security import check_password_hash, generate_password_hash
+day_parser = reqparse.RequestParser()
+day_parser.add_argument('title', required=True)
+day_parser.add_argument('content', required=True)
+day_parser.add_argument('is_private', required=True, type=bool)
+day_parser.add_argument('is_published', required=True, type=bool)
+day_parser.add_argument('user_id', required=True, type=int)
 
-from bot_token import TOKEN
+user_parser = reqparse.RequestParser()
+user_parser.add_argument('name', required=True)
+user_parser.add_argument('about', required=True)
+user_parser.add_argument('email', required=True)
+user_parser.add_argument('password', required=True)
 
+# ('breakfast', 'dinner', 'lunch', 'other_gains', 'lost', 'note', 'user_id')
 
-bot = telebot.TeleBot(TOKEN)
+#/days/<int:day_id>
+class DaysResource(Resource):
+    def get(self, day_id):
+        abort_if_day_not_found(day_id)
+        session = db_session.create_session()
+        days = session.query(Activities).get(day_id)
+        return jsonify({'day': days.to_dict(
+            only=('breakfast', 'dinner', 'lunch', 'other_gains', 'lost', 'note', 'user_id'))})
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+    def delete(self, activities_id):
+        abort_if_day_not_found(activities_id)
+        session = db_session.create_session()
+        activities = session.query(Activities).get(activities_id)
+        session.delete(activities)
+        session.commit()
+        return jsonify({'success': 'OK'})
 
-con = sqlite3.connect('../db/users.sqlite', check_same_thread=False)
-cur = con.cursor()
+class DaysListResource(Resource):
+    def get(self, user_id):
+        session = db_session.create_session()
 
-LOGIN, PASSWORD = '', ''
+        activities = session.query(Activities).all()
+        return jsonify({'days': [item.to_dict(
+            only=('title', 'content', 'user.name')) for item in activities]})
 
-
-@bot.message_handler(commands=['start'])
-def start_message(message):
-    msg = "Привет! Я - бот правильного питания!\nАвторизуйтесь, пожалуйста"
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(types.KeyboardButton('Авторизация'))
-    bot.send_message(message.chat.id, msg, reply_markup=markup)
-
-
-@bot.message_handler(commands=['login'])
-def login_message(message):
-    markup = types.ReplyKeyboardRemove()
-    bot.send_message(message.chat.id, 'Введите Ваш логин:', reply_markup=markup)
-    bot.register_next_step_handler(message, get_login_message)
-
-
-def get_login_message(message):
-    global login
-    login = message.text
-    bot.send_message(message.chat.id, 'Теперь введите пароль:')
-    bot.register_next_step_handler(message, get_password_message)
-
-
-def get_password_message(message):
-    global password
-    password = message.text
-    try_to_login_message(message)
-
-
-def try_to_login_message(message):
-    try:
-        hashed_password = cur.execute(
-            """SELECT hashed_password FROM users WHERE name = ?""", (login,)
-        ).fetchone()[0]
-        if not check_password_hash(hashed_password, password):
-            bot.send_message(message.chat.id, 'Логин или пароль неверны.')
-            login_message(message)
-        else:
-            LOGIN, PASSWORD = login, hashed_password
-            bot.send_message(message.chat.id, f'Вход выполнен успешно!\nДобро пожаловать, {LOGIN}!')
-    except Exception:
-        bot.send_message(message.chat.id, 'Логин или пароль неверны.')
-        login_message(message)
+    def post(self):
+        args = day_parser.parse_args()
+        session = db_session.create_session()
+        activities = Activities(
+            title=args['title'],
+            content=args['content'],
+            user_id=args['user_id'],
+            is_published=args['is_published'],
+            is_private=args['is_private']
+        )
+        session.add(activities)
+        session.commit()
+        return jsonify({'success': 'OK'})
 
 
-def check_auth_message(message):
-    if len(LOGIN) == 0 or len(PASSWORD) == 0:
-        bot.message_handler(message.chat.id, 'Необходимо авторизоваться!')
-        return False
-    return True
+def abort_if_day_not_found(activities_id):
+    session = db_session.create_session()
+    day = session.query(Activities).get(activities_id)
+    if not day:
+        abort(404, message=f"Day {day} not found")
+
+#/users/<int:user_id>
+class UsersResource(Resource):
+    def get(self, user_id):
+        abort_if_user_not_found(user_id)
+        session = db_session.create_session()
+        user = session.query(User).get(user_id)
+        return jsonify({'user': user.to_dict(
+            only=('name', 'about', 'email'))})
+
+    def delete(self, user_id):
+        abort_if_user_not_found(user_id)
+        session = db_session.create_session()
+        user = session.query(User).get(user_id)
+        session.delete(user)
+        session.commit()
+        return jsonify({'success': 'OK'})
 
 
-@bot.message_handler(content_types=['text'])
-def message_reply(message):
-    if message.text == 'Авторизация':
-        login_message(message)
-    if message.text == 'Выход':
-        pass
+class UsersListResource(Resource):
+    def get(self):
+        session = db_session.create_session()
+        user = session.query(User).all()
+        return jsonify({'users': [item.to_dict(
+            only=('name', 'about', 'email')) for item in user]})
+
+    def post(self):
+        args = user_parser.parse_args()
+        session = db_session.create_session()
+        user = User(
+            name=args['name'],
+            about=args['about'],
+            email=args['email'],
+        )
+        user.set_password(args['password'])
+        session.add(user)
+        session.commit()
+        return jsonify({'success': 'OK'})
 
 
-bot.infinity_polling()
+def abort_if_user_not_found(user_id):
+    session = db_session.create_session()
+    user = session.query(User).get(user_id)
+    if not user:
+        abort(404, message=f"User {user_id} not found")
+
+class WeeksResource(Resource):
+    def get(self, user_id, week_off):
+        abort_if_user_not_found(user_id)
+        session = db_session.create_session()
+        user = session.query(User).get(user_id)
+        week = user.get_week(week_off)[2]
+        week = list(map(lambda x: x.to_dict(only=('breakfast', 'dinner', 'lunch', 'other_gains', 'lost', 'note')), week))
+        return jsonify(week)
+
+#/users/<int:user_id>/weeks
+class WeeksListResource(Resource):
+    def get(self, user_id):
+        abort_if_user_not_found(user_id)
+        session = db_session.create_session()
+        user = session.query(User).get(user_id)
+        weeks = [user.get_week(0)[2], user.get_week(1)[2]]
+        for i, w in enumerate(weeks):
+            weeks[i] = list(map(lambda x: x.to_dict(only=('breakfast', 'dinner', 'lunch', 'other_gains', 'lost', 'note')), w))
+        return jsonify(weeks)

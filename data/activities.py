@@ -41,3 +41,5 @@ class Points(SqlAlchemyBase, SerializerMixin):
                                 sqlalchemy.ForeignKey("users.id"))
     user = orm.relation('User')
     is_finished = sqlalchemy.Column(sqlalchemy.Boolean, default=False)
+
+

@@ -10,7 +10,6 @@ from flask_login import LoginManager, login_user, login_required, logout_user, c
 from flask_restful import abort, Api
 from matplotlib import pyplot
 from io import StringIO
-import numpy as np
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
@@ -48,7 +47,6 @@ def index():
         points = db_sess.query(Points)
         return render_template("index.html", points=points, bmr=bmr,
                                style=url_for('static', filename=f'css/register.css'))
-        # points = db_sess.query(Points).filter(Points.is_private is not True)
     return render_template("index.html", points=points, bmr=bmr)
 
 dynamic_data = {}
@@ -109,108 +107,6 @@ def details(id):
         db_sess.commit()
         return redirect('/')
     return render_template('details.html', form=form, title='Изменение информации')
-
-
-@app.route("/change_details/<int:id>", methods=['GET', 'POST'])
-def change_details(id):
-    db_sess = db_session.create_session()
-    user = db_sess.query(User).get(id)
-    if user is None:
-        return abort(404)
-    form = DetailsForm()
-    if request.method == 'GET':
-        if user:
-            form.age.data = user.age
-            form.weight.data = user.weight
-            form.height.data = user.height
-            form.gender.data = user.gender
-        else:
-            return abort(404)
-    else:
-        if form.validate_on_submit():
-            db_sess = db_session.create_session()
-            usr = db_sess.query(User).get(current_user.id)
-            usr.age = form.age.data
-            usr.weight = form.weight.data
-            usr.height = form.height.data
-            usr.gender = form.gender.data
-            db_sess.commit()
-            return redirect(f'/profile/{current_user.id}')
-    return render_template('details.html', form=form, title='Изменение информации')
-
-
-@app.route('/points', methods=['GET', 'POST'])
-@login_required
-def add_point():
-    form = PointForm()
-    if form.validate_on_submit():
-        db_sess = db_session.create_session()
-        point = Points()
-        point.content = form.content.data
-        current_user.points.append(point)
-        db_sess.merge(current_user)
-        db_sess.commit()
-        return redirect('/')
-    return render_template('point.html', title='Новая цель',
-                           form=form)
-
-
-@app.route('/point_complete/<int:id>', methods=['GET', 'POST'])
-@login_required
-def complete(id):
-    db_sess = db_session.create_session()
-    point = db_sess.query(Points).filter(Points.id == id,
-                                         Points.user == current_user).first()
-    print(point.is_finished)
-    point.is_finished = not point.is_finished
-    print(point.is_finished, id)
-    db_sess.commit()
-    return redirect('/')
-
-# @app.route('/activities/<int:id>', methods=['GET', 'POST'])
-# @login_required
-# def view_activity(id):
-#     form = ActivityForm()
-#     if request.method == "GET":
-#         db_sess = db_session.create_session()
-#         activities = db_sess.query(Activities).filter(Activities.id == id,
-#                                                       Activities.user == current_user
-#                                                       ).first()
-#         if activities:
-#             form.date.data = activities.date
-#             form.breakfast.data = activities.breakfast
-#             form.lunch.data = activities.lunch
-#             form.dinner.data = activities.dinner
-#             form.is_private.data = activities.is_private
-#         else:
-#             abort(404)
-#     if form.validate_on_submit():
-#         db_sess = db_session.create_session()
-#         activities = db_sess.query(Activities).filter(Activities.id == id,
-#                                                       Activities.user == current_user
-#                                                       ).first()
-#         activities.date = form.date.data
-#         activities.breakfast = form.breakfast.data
-#         activities.lunch = form.lunch.data
-#         activities.dinner = form.dinner.data
-#         activities.is_private = form.is_private.data
-#         print(form.breakfast.data)
-#         db_sess.commit()
-#         return redirect('/')
-#     return render_template('activities.html',
-#                            title='Редактирование меню',
-#                            form=form
-#                            )
-
-
-@app.route('/points_delete/<int:id>', methods=['GET', 'POST'])
-@login_required
-def delete_point(id):
-    db_sess = db_session.create_session()
-    point = db_sess.query(Points).filter(Points.id == id).first()
-    db_sess.delete(point)
-    db_sess.commit()
-    return redirect('/')
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -294,6 +190,73 @@ def day_edit(id):
     form.lost.data = day.lost
     form.note.data = day.note
     return render_template('day_edit.html', form=form, week=current_user.get_week())
+
+
+@app.route("/change_details/<int:id>", methods=['GET', 'POST'])
+def change_details(id):
+    db_sess = db_session.create_session()
+    user = db_sess.query(User).get(id)
+    if user is None:
+        return abort(404)
+    form = DetailsForm()
+    if request.method == 'GET':
+        if user:
+            form.age.data = user.age
+            form.weight.data = user.weight
+            form.height.data = user.height
+            form.gender.data = user.gender
+        else:
+            return abort(404)
+    else:
+        if form.validate_on_submit():
+            db_sess = db_session.create_session()
+            usr = db_sess.query(User).get(current_user.id)
+            usr.age = form.age.data
+            usr.weight = form.weight.data
+            usr.height = form.height.data
+            usr.gender = form.gender.data
+            db_sess.commit()
+            return redirect(f'/profile/{current_user.id}')
+    return render_template('details.html', form=form, title='Изменение информации')
+
+
+@app.route('/points', methods=['GET', 'POST'])
+@login_required
+def add_point():
+    form = PointForm()
+    if form.validate_on_submit():
+        db_sess = db_session.create_session()
+        point = Points()
+        point.content = form.content.data
+        current_user.points.append(point)
+        db_sess.merge(current_user)
+        db_sess.commit()
+        return redirect('/')
+    return render_template('point.html', title='Новая цель',
+                           form=form)
+
+
+@app.route('/point_complete/<int:id>', methods=['GET', 'POST'])
+@login_required
+def complete(id):
+    db_sess = db_session.create_session()
+    point = db_sess.query(Points).filter(Points.id == id,
+                                         Points.user == current_user).first()
+    print(point.is_finished)
+    point.is_finished = not point.is_finished
+    print(point.is_finished, id)
+    db_sess.commit()
+    return redirect('/')
+
+
+@app.route('/points_delete/<int:id>', methods=['GET', 'POST'])
+@login_required
+def delete_point(id):
+    db_sess = db_session.create_session()
+    point = db_sess.query(Points).filter(Points.id == id).first()
+    db_sess.delete(point)
+    db_sess.commit()
+    return redirect('/')
 
 
 @app.route('/profile/<int:id>', methods=['GET', 'POST'])
